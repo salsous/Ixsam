@@ -1,0 +1,53 @@
+flows: 
+- name: "Flow #1 - Port 1 > Port 2"
+  duration:
+     choice: fixed_packets
+     fixed_packets:
+        packets: 20000000
+  rate:
+     choice: pps
+     pps: 1385502
+  size:
+     choice: fixed
+     fixed: 9000
+  metrics:
+     enable: true
+     loss: false
+     timestamps: false
+  packet:
+  - choice: ethernet
+    ethernet:
+       dst:
+          choice: value
+          value:  00:15:5d:a4:08:20
+       src:
+          choice: value
+          value:  00:15:5d:a4:08:1f
+  - choice: ipv4
+    ipv4:
+       dst:
+          choice: value
+          value:  10.0.0.1
+       src:
+          choice: increment
+          increment:
+             start: 10.0.1.1
+             step: 0.0.0.1
+             count: 100
+  tx_rx:
+     choice: port
+     port:
+        tx_name: "Port-1"
+        rx_name: "Port-2"
+ports: 
+- location: localhost:5551
+  name: "Port-1"
+- location: localhost:5552
+  name: "Port-2"
+layer1:
+- mtu: 9000
+  name: 100g-port
+  port_names:
+  - "Port-1"
+  - "Port-2"
+  speed: speed_100_gbps
