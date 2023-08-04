@@ -1,0 +1,76 @@
+services:
+  controller:
+    image: ghcr.io/open-traffic-generator/licensed/ixia-c-controller:latest
+    command: --accept-eula --http-port 8443
+    network_mode: "host"
+    restart: always
+  TE1-5551:
+    image: ghcr.io/open-traffic-generator/ixia-c-traffic-engine:1.6.0.35-v2
+    restart: always
+    privileged: true
+    volumes:
+      - type: bind
+          source: /mnt/huge
+          target: /mnt/huge
+      - type: bind
+          source: /sys/kernel/mm/hugepages
+          target: /sys/kernel/mm/hugepages
+      - type: bind
+          source: /sys/bus/pci/drivers
+          target: /sys/bus/pci/drivers
+      - type: bind
+          source: /sys/devices/system/node
+          target: /sys/devices/system/node
+      - type: bind
+          source: /dev
+          target: /dev
+    environment:
+    - OPT_LISTEN_PORT=5551
+    - ARG_IFACE_LIST=PCI_ADDRESS1
+    - OPT_NO_HUGEPAGES=no
+    - OPT_NO_PINNING=no
+    - WAIT_FOR_IFACE=Yes
+    
+  traffic_engine_2:
+    image: ghcr.io/open-traffic-generator/ixia-c-traffic-engine:1.6.0.35
+    restart: always
+    privileged: true
+    ports:
+      - "5556:5556"
+      - "50072:50071"
+    environment:
+    - OPT_LISTEN_PORT=5556
+    - ARG_IFACE_LIST=virtual@af_packet,veth2
+    - OPT_NO_HUGEPAGES=Yes
+    - OPT_NO_PINNING=Yes
+    - WAIT_FOR_IFACE=Yes
+  protocol_engine_1:
+    image: ghcr.io/open-traffic-generator/licensed/ixia-c-protocol-engine:1.00.0.290
+    restart: always
+    privileged: true
+    network_mode: service:traffic_engine_1
+    environment:
+    - INTF_LIST=veth0
+  protocol_engine_2:
+    image: ghcr.io/open-traffic-generator/licensed/ixia-c-protocol-engine:1.00.0.290
+    restart: always
+    privileged: true
+    network_mode: service:traffic_engine_2
+    environment:
+    - INTF_LIST=veth2
+  frr:
+    image: frrouting/frr:v8.4.1
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    volumes:
+      - type: bind
+        source: ./frr/daemons
+        target: /etc/frr/daemons
+      - type: bind
+        source: ./frr/frr.conf
+        target: /etc/frr/frr.conf
+      - type: bind
+        source: ./frr/vtysh.conf
+        target: /etc/frr/vtysh.conf
